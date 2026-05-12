@@ -17,13 +17,13 @@ def bye_command():
 
 def list_sessions_command():
     return {
-        "message": "Available sessions:\n",
-        "action": "list_sessions",
+        "message": "",
+        "action": "sessions",
     }
 
 def delete_session_command():
     return {
-        "message": "",
+        "message": "Session cleared.\n",
         "action": "clear",
     }
 
@@ -31,6 +31,12 @@ def new_chat_command():
     return {
         "message": "Starting a new chat...\n",
         "action": "new_chat",
+    }
+
+def resume_chat_command():
+    return {
+        "message": "",
+        "action": "resume",
     }
 
 
@@ -45,13 +51,25 @@ COMMANDS = {
         "description": "Exit the app",
     },
 
-    "new-chat": {
+    "new": {
         "handler": new_chat_command,
         "description": "Create a new session and start chatting",
     },
     "sessions": {
         "handler": list_sessions_command,
         "description": "List all available sessions",
+    },
+    "resume": {
+        "handler": resume_chat_command,
+        "description": "Resume a previous session",
+    },
+    "rename": {
+        "handler": None,  # TODO: implement rename_session_command
+        "description": "Rename current session",
+    },
+    "compact": {
+        "handler": None,  # TODO: implement compact_session_command
+        "description": "Compact current session history",
     },
     "clear": {
         "handler": delete_session_command,
@@ -60,7 +78,7 @@ COMMANDS = {
 }
 
 
-def commands(raw_cmd: str, session_id: str = None) -> dict:
+def commands(raw_cmd: str) -> dict:
     cmd = raw_cmd.strip().lower()
 
     if not cmd:
