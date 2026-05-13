@@ -39,6 +39,17 @@ def resume_chat_command():
         "action": "resume",
     }
 
+def rename_chat_command():
+    return {
+        "message": "",
+        "action": "rename",
+    }
+
+def compact_chat_command():
+    return {
+        "message": "",
+        "action": "compact",
+    }
 
 COMMANDS = {
     "help": {
@@ -64,11 +75,11 @@ COMMANDS = {
         "description": "Resume a previous session",
     },
     "rename": {
-        "handler": None,  # TODO: implement rename_session_command
+        "handler": rename_chat_command,
         "description": "Rename current session",
     },
     "compact": {
-        "handler": None,  # TODO: implement compact_session_command
+        "handler": compact_chat_command,
         "description": "Compact current session history",
     },
     "clear": {
