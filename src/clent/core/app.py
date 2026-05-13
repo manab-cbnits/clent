@@ -1,8 +1,8 @@
 from ..lib.separator import separator
 from .commands import commands
-from .chat import ChatStream
-from ..prompts.system_prompt import SYSTEM_PROMPT
-from .conversation import get_messages, save_message, delete_conversation, list_session, list_all_sessions
+from .chat import Chat, ChatStream
+from ..prompts import SYSTEM_PROMPT, SUMMARY_PROMPT, RENAME_PROMPT
+from .conversation import get_messages, save_message, delete_conversation, list_session, list_all_sessions, set_session_name, set_session_summary
 
 
 def app():
@@ -43,7 +43,7 @@ def app():
                         if not lines:
                             print("No available sessions.")
                         else:
-                            print("Available sessions:\n".join(lines))
+                            print("Available sessions:\n", "\n".join(lines))
 
                     case "resume":
                         lines = list_session()
@@ -75,15 +75,62 @@ def app():
                         continue
 
                     case "rename":
-                        pass    # TODO: implement session renaming
+                        if len(messages) <= 1:
+                            print("No conversation history to analyze for renaming.")
+                            continue
+
+                        response = Chat(
+                            messages=[RENAME_PROMPT] + messages[1:],
+                            temperature=0.0,
+                            # max_tokens=20
+                        )
+                        new_name = response.strip().capitalize()
+                        if not new_name:
+                            print("Session rename cancelled (empty name).")
+                            continue
+                        else:
+                            if not CURRENT_SESSION_ID:
+                                print("No active session to rename.")
+                                continue
+
+                            set_session_name(CURRENT_SESSION_ID, new_name)
+                            print(f"Session renamed to: {new_name}")
 
                     case "compact":
-                        pass    # TODO: implement session compaction (remove old messages but keep summary in metadata)
+                        if len(messages) <= 1:
+                            print("No conversation history to analyze for summarization.")
+                            continue
+
+                        confirm = input("This will summarize the current conversation and remove detailed history. Continue? (y/n): ").strip().lower()
+                        print("")
+                        if confirm != "y":
+                            print("Session summarization cancelled.")
+                            continue
+
+                        summary = Chat(
+                            messages=[SUMMARY_PROMPT] + messages[1:],
+                            temperature=0.2,
+                            max_tokens=400
+                        ).strip()
+
+                        if not summary:
+                            print("Session summarization failed (empty summary).")
+                            continue
+                        else:
+                            set_session_summary(CURRENT_SESSION_ID, summary)
+                            print(f"Session summarized: {summary}")
 
                     case "clear":
                         if not CURRENT_SESSION_ID:
                             print("No active session to clear.")
                             continue
+
+                        confirm = input("This will delete the current session and all its messages. Continue? (y/n): ").strip().lower()
+                        if confirm != "y":
+                            print("Session deletion cancelled.")
+                            continue
+                        print("")
+
                         delete_conversation(CURRENT_SESSION_ID)
                         CURRENT_SESSION_ID = None
                         messages = [SYSTEM_PROMPT]
