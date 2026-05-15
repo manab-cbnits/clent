@@ -4,12 +4,15 @@ from typing import List, TypedDict, Optional, Annotated
 
 
 class SessionMetadata(TypedDict):
+    id: str
     name: str
     preview: str
     summary: str
 
 
 class AgentState(TypedDict):
+    session_dir: str
+
     available_sessions: List[str]
     active_session_id: Optional[str] = None
     messages: Annotated[List[BaseMessage], operator.add]
