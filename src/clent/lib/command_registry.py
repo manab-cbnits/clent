@@ -9,12 +9,6 @@ def help_command():
         "action": None,
     }
 
-def bye_command():
-    return {
-        "message": "Goodbye!\n",
-        "action": "exit",
-    }
-
 def list_sessions_command():
     return {
         "message": "",
@@ -56,12 +50,6 @@ COMMANDS = {
         "handler": help_command,
         "description": "Show available commands",
     },
-
-    "bye": {
-        "handler": bye_command,
-        "description": "Exit the app",
-    },
-
     "new": {
         "handler": new_chat_command,
         "description": "Create a new session and start chatting",
