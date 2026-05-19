@@ -1,6 +1,8 @@
-SUMMARY_PROMPT = {
-    "role": "system",
-    "content": (
+from langchain_core.messages import SystemMessage
+
+
+SUMMARY_PROMPT = SystemMessage(
+    content=(
         "You are a system tasked with compressing conversation history into a dense memory block. "
         "The chat history will be deleted and replaced by the summary, so the AI must be able to read it and seamlessly continue the conversation. "
         "Strict rules for the summary: "
@@ -10,4 +12,4 @@ SUMMARY_PROMPT = {
         "4. Output a dense, factual summary. Use bullet points if there are multiple constraints or distinct topics. "
         "5. If there is a previous summary included in the chat, merge it intelligently with the new information."
     )
-}
+)

@@ -1,6 +1,8 @@
-RENAME_PROMPT = {
-    "role": "system",
-    "content": (
+from langchain_core.messages import SystemMessage
+
+
+RENAME_PROMPT = SystemMessage(
+    content=(
         "You are an expert summarizer who generates concise, highly descriptive titles for chat sessions. "
         "Analyze the conversation below and extract the core topic or intent into a title of upto 5 words. "
         "Strict rules: "
@@ -10,4 +12,4 @@ RENAME_PROMPT = {
         "4. The title MUST be in the exact same language as the user's messages. "
         "5. Focus on the main entity, task, or question."
     )
-}
+)

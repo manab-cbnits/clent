@@ -9,15 +9,10 @@ builder = StateGraph(AgentState)
 
 # Conditional nodes
 def route_after_input(state: AgentState) -> str:
-    if state["user_input"].lower().startswith("/") or state["user_input"] == "?":
+    if state["user_input"].lower().startswith("/") or state["user_input"].strip() == "?":
         return END if state["user_input"].lower() == "/bye" else "command"
     return "chat"
 
-def route_after_command(state: AgentState) -> str:
-    if state["action"] == "exit":
-        return END
-    return 
-    # return "input"
 
 # create nodes
 builder.add_node("input", Input_Node)
@@ -32,6 +27,7 @@ builder.add_conditional_edges(
     {
         "chat": "chat",
         "command": "command",
+        END: END,
     }
 )
 builder.add_edge("chat", "input")

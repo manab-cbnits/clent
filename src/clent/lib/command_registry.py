@@ -50,6 +50,10 @@ COMMANDS = {
         "handler": help_command,
         "description": "Show available commands",
     },
+    "bye": {
+        "handler": None,
+        "description": "Exit the application",
+    },
     "new": {
         "handler": new_chat_command,
         "description": "Create a new session and start chatting",

@@ -1,22 +1,21 @@
-import operator
+from typing import List, Optional, TypedDict
+
 from langchain_core.messages import BaseMessage
-from typing import List, TypedDict, Optional, Annotated
 
 
-class SessionMetadata(TypedDict):
+class SessionMetadata(TypedDict, total=False):
     id: str
     name: str
     preview: str
     summary: str
 
 
-class AgentState(TypedDict):
+class AgentState(TypedDict, total=False):
     session_dir: str
 
-    available_sessions: List[str]
-    active_session_id: Optional[str] = None
-    messages: Annotated[List[BaseMessage], operator.add]
-    metadata: Optional[SessionMetadata] = None
+    available_sessions: List[SessionMetadata]
+    active_session_id: Optional[str]
+    messages: List[BaseMessage]
 
-    user_input: str | None
-    assistant_reponse: str | None
+    user_input: Optional[str]
+    assistant_reponse: Optional[str]
