@@ -206,4 +206,11 @@ def Command_Node(state: AgentState):
                 return {
                     "available_sessions": updated_sessions,
                 }
-            
+
+        case "config":
+            print("Launching configuration wizard on next cycle...")
+            return {
+                "run_setup": True,
+                "user_input": "",
+            }
+

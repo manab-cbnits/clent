@@ -5,14 +5,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Sequence, TypedDict
 
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage
-
-
-# ==========================================
-# CONFIG
-# ==========================================
-
-BASE_DIR = Path(__file__).parent.parent
-SESSIONS_DIR = BASE_DIR / "sessions"
+from clent.config import get_sessions_dir
 
 
 class Message(TypedDict):
@@ -80,7 +73,7 @@ def messages_to_langchain(messages: Sequence[Any]) -> List[BaseMessage]:
 
 def load_messages(session_id: str) -> List[Message]:
     """Load all messages from a session."""
-    messages_file = SESSIONS_DIR / session_id / "messages.json"
+    messages_file = get_sessions_dir() / session_id / "messages.json"
     if not messages_file.exists():
         raise FileNotFoundError(f"Session '{session_id}' not found.")
     with open(messages_file, "r", encoding="utf-8") as f:
@@ -98,7 +91,7 @@ def load_messages(session_id: str) -> List[Message]:
 
 def save_messages(session_id: str, messages: Sequence[Any]) -> None:
     """Save messages to disk."""
-    session_dir = SESSIONS_DIR / session_id
+    session_dir = get_sessions_dir() / session_id
     session_dir.mkdir(parents=True, exist_ok=True)
     messages_file = session_dir / "messages.json"
     records = messages_to_records(messages)
@@ -108,7 +101,7 @@ def save_messages(session_id: str, messages: Sequence[Any]) -> None:
 
 def load_metadata(session_id: str) -> SessionMetadata:
     """Load session metadata."""
-    metadata_file = SESSIONS_DIR / session_id / "metadata.json"
+    metadata_file = get_sessions_dir() / session_id / "metadata.json"
     if not metadata_file.exists():
         raise FileNotFoundError(f"Metadata for session '{session_id}' not found.")
     with open(metadata_file, "r", encoding="utf-8") as f:
@@ -117,7 +110,7 @@ def load_metadata(session_id: str) -> SessionMetadata:
         raise ValueError("Invalid metadata.json (expected object).")
     name = data.get("name")
     preview = data.get("preview")
-    summary = data.get("summary")          # new
+    summary = data.get("summary")
     return {
         "name": name if isinstance(name, str) else "",
         "preview": preview if isinstance(preview, str) else "",
@@ -127,7 +120,7 @@ def load_metadata(session_id: str) -> SessionMetadata:
 
 def save_metadata(session_id: str, metadata: SessionMetadata) -> None:
     """Save session metadata to disk."""
-    session_dir = SESSIONS_DIR / session_id
+    session_dir = get_sessions_dir() / session_id
     session_dir.mkdir(parents=True, exist_ok=True)
     metadata_file = session_dir / "metadata.json"
     normalized: SessionMetadata = {
@@ -220,11 +213,12 @@ def save_message(
     session_id: Optional[str] = None
 ) -> Dict[str, Any]:
     """Create or update a session, returning success and session_id."""
-    SESSIONS_DIR.mkdir(parents=True, exist_ok=True)
+    sessions_dir = get_sessions_dir()
+    sessions_dir.mkdir(parents=True, exist_ok=True)
 
     if session_id is None:
         session_id = uuid.uuid4().hex
-    session_dir = SESSIONS_DIR / session_id
+    session_dir = sessions_dir / session_id
     if not session_dir.exists():
         session_dir.mkdir(parents=True, exist_ok=True)
 
@@ -249,7 +243,7 @@ def get_messages(session_id: str, limit: Optional[int] = 30) -> List[BaseMessage
 # DELETE SESSION
 def delete_conversation(session_id: str) -> None:
     """Delete a session completely."""
-    session_dir = SESSIONS_DIR / session_id
+    session_dir = get_sessions_dir() / session_id
     if not session_dir.exists():
         raise FileNotFoundError(f"Session '{session_id}' not found.")
     shutil.rmtree(session_dir)
@@ -259,8 +253,9 @@ def delete_conversation(session_id: str) -> None:
 # LIST CONVERSATIONS
 def list_all_sessions() -> List[SessionMetadata]:
     """Return a list of session metadata objects for all sessions."""
-    SESSIONS_DIR.mkdir(parents=True, exist_ok=True)
-    sessions = [session for session in SESSIONS_DIR.iterdir() if session.is_dir()]
+    sessions_dir = get_sessions_dir()
+    sessions_dir.mkdir(parents=True, exist_ok=True)
+    sessions = [session for session in sessions_dir.iterdir() if session.is_dir()]
     sessions.sort(key=lambda session: session.stat().st_mtime, reverse=True)
 
     results: List[SessionMetadata] = []

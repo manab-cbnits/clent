@@ -3,14 +3,8 @@ from pathlib import Path
 from typing import List, Dict, TypedDict, Optional, Any
 import shutil
 
+from clent.config import get_sessions_dir
 
-
-# ==========================================
-# CONFIG
-# ==========================================
-
-BASE_DIR = Path(__file__).parent.parent
-SESSIONS_DIR = BASE_DIR / "sessions"
 
 
 class Message(TypedDict):

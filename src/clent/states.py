@@ -19,3 +19,5 @@ class AgentState(TypedDict, total=False):
 
     user_input: Optional[str]
     assistant_reponse: Optional[str]
+
+    run_setup: Optional[bool]  # set to True to trigger the setup wizard on next cycle

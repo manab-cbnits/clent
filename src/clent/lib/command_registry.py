@@ -45,6 +45,12 @@ def compact_chat_command():
         "action": "compact",
     }
 
+def config_command():
+    return {
+        "message": "",
+        "action": "config",
+    }
+
 COMMANDS = {
     "help": {
         "handler": help_command,
@@ -77,6 +83,10 @@ COMMANDS = {
     "clear": {
         "handler": delete_session_command,
         "description": "Delete current session history",
+    },
+    "config": {
+        "handler": config_command,
+        "description": "Reconfigure API key, model, and other settings",
     },
 }
 

@@ -1,5 +1,5 @@
 from clent.states import AgentState
-from clent.nodes import Chat, Input_Node, Command_Node
+from clent.nodes import Chat, Input_Node, Command_Node, Setup_Node
 from langgraph.graph import StateGraph, START, END
 
 
@@ -15,12 +15,14 @@ def route_after_input(state: AgentState) -> str:
 
 
 # create nodes
+builder.add_node("setup", Setup_Node)
 builder.add_node("input", Input_Node)
 builder.add_node("chat", Chat)
 builder.add_node("command", Command_Node)
 
 # create edges
-builder.add_edge(START, "input")
+builder.add_edge(START, "setup")          # ← setup is first
+builder.add_edge("setup", "input")        # ← then input as normal
 builder.add_conditional_edges(
     "input",
     route_after_input,
@@ -30,8 +32,8 @@ builder.add_conditional_edges(
         END: END,
     }
 )
-builder.add_edge("chat", "input")
-builder.add_edge("command", "input")
+builder.add_edge("chat", "setup")         # ← loop back through setup (pass-through when configured)
+builder.add_edge("command", "setup")      # ← ensures /config re-triggers the wizard
 
 # compile the graph
 clent_graph = builder.compile()

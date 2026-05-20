@@ -1,24 +1,24 @@
-from pathlib import Path
-from clent.lib.conversation import get_messages, list_all_sessions
+from clent.config import get_sessions_dir
+from clent.lib.conversation import list_all_sessions
 from clent.graph import initialize_graph
 
 
-SESSIONS_DIR = Path(__file__).parent / "sessions"
-
-
 def main():
-    SESSIONS_DIR.mkdir(parents=True, exist_ok=True)
+    sessions_dir = get_sessions_dir()
+    sessions_dir.mkdir(parents=True, exist_ok=True)
     available_sessions = list_all_sessions()
 
     state = {
-        "session_dir": SESSIONS_DIR,
+        "session_dir": sessions_dir,
 
         "available_sessions": available_sessions,
         "active_session_id": None,
         "messages": [],
-        
+
         "user_input": "",
         "assistant_reponse": "",
+
+        "run_setup": False,
     }
 
     print("Welcome to clent...")
