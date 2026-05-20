@@ -2,9 +2,8 @@ from clent.states import AgentState
 from clent.prompts import RENAME_PROMPT, SUMMARY_PROMPT
 from clent.lib.command_registry import commands
 from clent.lib.llm import _get_llm
-from clent.lib.session_handler import delete_conversation
-from pathlib import Path
-from clent.lib.conversation import get_messages, set_session_summary, save_metadata
+
+from clent.lib.conversation import get_messages, set_session_summary, save_metadata, delete_conversation
 
 
 def Command_Node(state: AgentState):
@@ -42,14 +41,7 @@ def Command_Node(state: AgentState):
 
             session_id = state["active_session_id"]
 
-            base_dir = Path(state.get("session_dir") or "")
-            if str(base_dir) in ("", "."):
-                from clent.lib.session_handler import SESSIONS_DIR
-                base_dir = SESSIONS_DIR
-
-            session_dir = base_dir if base_dir.name == session_id else (base_dir / session_id)
-
-            res = delete_conversation(session_dir=session_dir, session_id=session_id)
+            res = delete_conversation(session_id=session_id)
             if not res.get("success"):
                 print(res.get("error") or "Session deletion failed. Please try again later...")
                 return state
@@ -70,7 +62,6 @@ def Command_Node(state: AgentState):
                 "user_input": None,
                 "assistant_reponse": None,
             }
-             
 
         case "sessions":
             sessions = state.get("available_sessions") or []
@@ -80,7 +71,12 @@ def Command_Node(state: AgentState):
                 lines = []
                 for s in sessions:
                     if isinstance(s, dict):
-                        lines.append(f"{s.get('id')} - {s.get('name') or s.get('preview') or ''}")
+                        label = s.get('name') or s.get('summary') or s.get('preview') or ''
+                        label = label.split("\n")
+                        label = " ".join(label)
+                        if len(label) > 100:
+                            label = label[:97] + '...'
+                        lines.append(f"{s.get('id')} - {label}")
                     else:
                         lines.append(str(s))
                 print("Available sessions:\n", "\n".join(lines))
@@ -94,7 +90,10 @@ def Command_Node(state: AgentState):
             lines = []
             for s in sessions:
                 if isinstance(s, dict):
-                    lines.append(f"{s.get('id')} - {s.get('name') or s.get('preview') or ''}")
+                    label = s.get('name') or s.get('summary') or s.get('preview') or ''
+                    if len(label) > 100:
+                        label = label[:97] + '...'
+                    lines.append(f"{s.get('id')} - {label}")
                 else:
                     lines.append(str(s))
 

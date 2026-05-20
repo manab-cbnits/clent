@@ -2,7 +2,7 @@ def help_command():
     lines = []
 
     for name, cmd in COMMANDS.items():
-        lines.append(f"/{name} - {cmd['description']}")
+        lines.append(f"   /{name} - {cmd['description']}")
 
     return {
         "message": "\n".join(lines),

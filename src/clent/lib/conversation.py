@@ -1,7 +1,6 @@
 import json
 import shutil
 import uuid
-from pathlib import Path
 from typing import Any, Dict, List, Optional, Sequence, TypedDict
 
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage
@@ -125,14 +124,14 @@ def save_metadata(session_id: str, metadata: SessionMetadata) -> None:
     metadata_file = session_dir / "metadata.json"
     normalized: SessionMetadata = {
         "name": (metadata.get("name") or "").strip(),
-        "preview": (metadata.get("preview") if not metadata.get("summary") else "").strip(),
+        "preview": (metadata.get("preview") or "").strip(),
         "summary": (metadata.get("summary") or "").strip(),
     }
     try:
         with open(metadata_file, "w", encoding="utf-8") as f:
             json.dump(normalized, f, indent=4, ensure_ascii=False)
     except Exception as e:
-        print(f"Failed to save metadata. Tryy again later")
+        print("Failed to save metadata. Try again later")
         raise e
 
 
@@ -165,6 +164,11 @@ def _compute_preview_from_messages(messages: List[Message]) -> str:
         else:
             i += 1
     if not pairs:
+        # Fall back to system messages (e.g. compacted session summaries)
+        for msg in messages:
+            rec = _message_to_record(msg)
+            if rec.get("role") == "system" and rec.get("content"):
+                return _truncate(_one_line(rec["content"]), 60)
         return "no messages"
     return " ".join(f"➤ {q} ✤ {a}" for q, a in pairs)
 
@@ -184,12 +188,16 @@ def ensure_metadata(session_id: str, messages: Optional[List[Message]] = None) -
 
     # Compute preview if empty
     if not metadata.get("preview"):
-        if messages is None:
-            try:
-                messages = load_messages(session_id)
-            except Exception:
-                messages = []
-        metadata["preview"] = _compute_preview_from_messages(messages)
+        # Prefer summary-based preview for compacted sessions
+        if metadata.get("summary"):
+            metadata["preview"] = _truncate(_one_line(metadata["summary"]), 60)
+        else:
+            if messages is None:
+                try:
+                    messages = load_messages(session_id)
+                except Exception:
+                    messages = []
+            metadata["preview"] = _compute_preview_from_messages(messages)
         save_metadata(session_id, metadata)
     return metadata
 
@@ -244,10 +252,23 @@ def get_messages(session_id: str, limit: Optional[int] = 30) -> List[BaseMessage
 def delete_conversation(session_id: str) -> None:
     """Delete a session completely."""
     session_dir = get_sessions_dir() / session_id
-    if not session_dir.exists():
-        raise FileNotFoundError(f"Session '{session_id}' not found.")
-    shutil.rmtree(session_dir)
-    print(f"Session: {session_id} cleared successfully.")
+
+    try:
+        if not session_dir.exists():
+            raise FileNotFoundError(f"Session '{session_id}' not found.")
+        shutil.rmtree(session_dir)
+        print(f"Session: {session_id} cleared successfully.")
+
+        return {
+            "success": True
+        }
+    except OSError as e:
+        print("Session deletion failed. Please try again later...")
+
+        return {
+            "success": False,
+            "error": f"Error: ${e}"
+        }
 
 
 # LIST CONVERSATIONS
