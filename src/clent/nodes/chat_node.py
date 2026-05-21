@@ -1,7 +1,7 @@
 from clent.states import AgentState
 from clent.lib.llm import _get_llm
 from clent.prompts import SYSTEM_PROMPT
-from clent.lib.conversation import save_message
+from clent.lib.conversation import save_message, ensure_metadata
 from langchain_core.messages import HumanMessage, AIMessage
 
 
@@ -57,10 +57,27 @@ def Chat(state: AgentState):
     if not save_result["success"]:
         print(f"Error saving message: {save_result['error']}")
 
-
-    return {
+    # Build the state update
+    state_update = {
         "user_input": "",
         "assistant_response": full_response,
         "active_session_id": save_result["session_id"],
         "messages": updated_messages if save_result["success"] and assistant_message is not None else [],
     }
+
+    # If a new session was created, add it to available_sessions
+    new_session_id = save_result["session_id"]
+    was_new_session = state["active_session_id"] is None and new_session_id is not None and save_result["success"]
+    if was_new_session:
+        meta = ensure_metadata(new_session_id)
+        new_entry = {
+            "id": new_session_id,
+            "name": meta.get("name", ""),
+            "preview": meta.get("preview", ""),
+            "summary": meta.get("summary", ""),
+        }
+        available_sessions = list(state.get("available_sessions") or [])
+        available_sessions.insert(0, new_entry)
+        state_update["available_sessions"] = available_sessions
+
+    return state_update

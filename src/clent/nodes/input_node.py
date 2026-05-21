@@ -10,13 +10,14 @@ def Input_Node(state: AgentState) -> dict:
             user_input = input("\n➤  ").strip()
             confirmed = 2
             if user_input:
+                print("✤  ", end="", flush=True)
                 break
         except KeyboardInterrupt:
             confirmed -= 1
             if confirmed <= 0:
                 print("Ready to help whenever needed...\n")
                 exit(0)
-            print("\nPress Ctrl+C again to exit.")
+            print("Press Ctrl+C again to exit.")
 
     return {
         "user_input": user_input
