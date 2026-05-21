@@ -21,3 +21,6 @@ class AgentState(TypedDict, total=False):
     assistant_reponse: Optional[str]
 
     run_setup: Optional[bool]  # set to True to trigger the setup wizard on next cycle
+
+    # LLM-facing hint to generate correct shell commands for this runtime.
+    shell_environment_hint: Optional[str]

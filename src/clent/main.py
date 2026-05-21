@@ -1,6 +1,13 @@
+import os
 from clent.config import get_sessions_dir
 from clent.lib.conversation import list_all_sessions
 from clent.graph import initialize_graph
+from dotenv import load_dotenv
+
+load_dotenv()
+
+os.environ["LANGSMITH_TRACING"] = os.getenv("LANGSMITH_TRACING")
+os.environ["LANGSMITH_API_KEY"] = os.getenv("LANGSMITH_API_KEY")
 
 
 def main():

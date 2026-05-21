@@ -20,7 +20,6 @@ mcp = FastMCP("shell")
 
 
 @mcp.tool(
-    name="ExecuteShellCommand",
     description=(
         "Execute a shell command on the system and return its output. "
         "Use this tool whenever the user asks you to run a command, inspect "
@@ -53,6 +52,7 @@ def execute_shell_command(command: str, timeout: int = 30) -> dict:
             capture_output=True,
             text=True,
             timeout=timeout,
+            stdin=subprocess.DEVNULL,
         )
         stdout = result.stdout
         stderr = result.stderr

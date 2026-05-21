@@ -13,6 +13,7 @@ Transport options:
   - "sse"    : agent connects to a running HTTP server (best for remote tools).
 """
 
+import sys
 from pathlib import Path
 
 # Absolute path to this package directory — used to locate server scripts.
@@ -33,31 +34,35 @@ def get_mcp_servers_config() -> dict:
             "transport": "stdio",
         },
     """
-    import sys
-    from pathlib import Path
 
-    # Determine the project root directory (4 levels up from this file)
-    # /home/manu/Desktop/clent/src/clent/mcp_servers/client.py
-    project_root = Path(__file__).resolve().parent.parent.parent.parent
+    # Determine the project root directory
+    project_root = Path(__file__).resolve().parent.parent
     
     # Path to the 'gmail' executable in the current virtualenv
-    gmail_bin = Path(sys.executable).parent / "gmail"
+    gmail_exe_name = "gmail.exe" if sys.platform == "win32" else "gmail"
+    gmail_bin = Path(sys.executable).parent / gmail_exe_name
 
-    return {
+    servers = {
         # ── Shell tool ────────────────────────────────────────────────────────
         "shell": {
             "command": sys.executable,          # uses the active venv Python
             "args": [str(_SERVERS_DIR / "shell_server.py")],
             "transport": "stdio",
         },
+    }
 
-        # ── Gmail tool ────────────────────────────────────────────────────────
-        "gmail": {
+    # ── Gmail tool ────────────────────────────────────────────────────────
+    creds_path = project_root  / "credentials.json"
+    if creds_path.exists():
+        servers["gmail"] = {
             "command": str(gmail_bin),
             "args": [
-                "--creds-file-path", str(project_root / "credentials.json"),
+                "--creds-file-path", str(creds_path),
                 "--token-path", str(project_root / "token.json")
             ],
             "transport": "stdio",
-        },
-    }
+        }
+    else:
+        print(f"Warning: Skipping gmail MCP server because {creds_path} was not found.")
+
+    return servers
