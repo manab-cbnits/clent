@@ -13,4 +13,5 @@ wheels/
 
 
 src/clent/settings.json
-src/clent/sessions/
+src/clent/sessions/*
+src/clent/token.json

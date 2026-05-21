@@ -6,6 +6,7 @@ readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "dotenv>=0.9.9",
+    "gmail",
     "langchain>=1.2.18",
     "langchain-mcp-adapters>=0.1.0",
     "langchain-openai>=1.2.1",
@@ -19,3 +20,6 @@ clent = "clent.main:main"
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
+
+[tool.uv.sources]
+gmail = { git = "https://github.com/theposch/gmail-mcp.git" }

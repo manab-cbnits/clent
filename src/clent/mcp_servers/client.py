@@ -34,6 +34,14 @@ def get_mcp_servers_config() -> dict:
         },
     """
     import sys
+    from pathlib import Path
+
+    # Determine the project root directory (4 levels up from this file)
+    # /home/manu/Desktop/clent/src/clent/mcp_servers/client.py
+    project_root = Path(__file__).resolve().parent.parent.parent.parent
+    
+    # Path to the 'gmail' executable in the current virtualenv
+    gmail_bin = Path(sys.executable).parent / "gmail"
 
     return {
         # ── Shell tool ────────────────────────────────────────────────────────
@@ -43,10 +51,13 @@ def get_mcp_servers_config() -> dict:
             "transport": "stdio",
         },
 
-        # ── Add future MCP servers below ──────────────────────────────────────
-        # "my_tool": {
-        #     "command": sys.executable,
-        #     "args": [str(_SERVERS_DIR / "my_tool_server.py")],
-        #     "transport": "stdio",
-        # },
+        # ── Gmail tool ────────────────────────────────────────────────────────
+        "gmail": {
+            "command": str(gmail_bin),
+            "args": [
+                "--creds-file-path", str(project_root / "credentials.json"),
+                "--token-path", str(project_root / "token.json")
+            ],
+            "transport": "stdio",
+        },
     }
