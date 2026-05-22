@@ -1,6 +1,6 @@
 [project]
 name = "clent"
-version = "0.1.0"
+version = "0.3.0"
 description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.12"
@@ -12,6 +12,7 @@ dependencies = [
     "langchain-openai>=1.2.1",
     "langgraph>=1.1.10",
     "mcp>=1.0.0",
+    "rich>=13.0.0",
 ]
 
 [project.scripts]

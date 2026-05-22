@@ -6,11 +6,13 @@ from clent.config import (
     is_configured,
     DEFAULT_SETTINGS,
 )
+from clent.lib.ui import print_header, print_success, print_info, console
 
 
 # ─────────────────────────────────────────────
 # Helpers
 # ─────────────────────────────────────────────
+
 
 def _prompt(label: str, current: str, placeholder: str = "") -> str:
     """
@@ -29,42 +31,49 @@ def _prompt(label: str, current: str, placeholder: str = "") -> str:
 
 def _run_wizard(settings: dict) -> dict:
     """Interactively fill in settings and return the updated dict."""
-    print("\n⚙  Setup  (press Enter to keep the current value / skip)\n")
+    print_header("Setup Wizard", color="yellow")
+    console.print("[dim](press Enter to keep the current value / skip)[/dim]")
+    console.print()
 
     env = settings.get("env", {})
     models = env.get("CLENT_MODELS", {})
 
-    api_key   = _prompt("API key",               env.get("CLENT_API_KEY", ""))
-    base_url  = _prompt("Base URL for the model", env.get("CLENT_BASE_URL", ""))
-    default_m = _prompt("Default model name",     models.get("default", ""))
-    thinking_m = _prompt("Thinking model name",   models.get("thinking", ""))
-    code_m    = _prompt("Code model name",         models.get("code", ""))
-    sess_dir  = _prompt("Sessions directory",      settings.get("sessions_dir", ""), "sessions")
-    theme     = _prompt("UI theme (dark/light)",   settings.get("theme", ""),        "dark")
+    api_key = _prompt("API key", env.get("CLENT_API_KEY", ""))
+    base_url = _prompt("Base URL for the model", env.get("CLENT_BASE_URL", ""))
+    default_m = _prompt("Default model name", models.get("default", ""))
+    thinking_m = _prompt("Thinking model name", models.get("thinking", ""))
+    code_m = _prompt("Code model name", models.get("code", ""))
+    sess_dir = _prompt(
+        "Sessions directory", settings.get("sessions_dir", ""), "sessions"
+    )
+    theme = _prompt("UI theme (dark/light)", settings.get("theme", ""), "dark")
 
     updated = {
         "env": {
-            "CLENT_API_KEY":  api_key,
+            "CLENT_API_KEY": api_key,
             "CLENT_BASE_URL": base_url,
             "CLENT_MODELS": {
-                "default":  default_m,
+                "default": default_m,
                 "thinking": thinking_m,
-                "code":     code_m,
+                "code": code_m,
             },
         },
         "sessions_dir": sess_dir,
-        "theme":        theme,
+        "theme": theme,
     }
 
     save_settings(updated)
-    print("\n✔  Settings saved to settings.json")
-    print("   Please restart clent for the changes to take effect.\n")
+    print()
+    print_success("Settings saved to settings.json")
+    print_info("Please restart clent for the changes to take effect.")
+    print()
     sys.exit(0)
 
 
 # ─────────────────────────────────────────────
 # Node
 # ─────────────────────────────────────────────
+
 
 def Setup_Node(state: AgentState) -> dict:
     """

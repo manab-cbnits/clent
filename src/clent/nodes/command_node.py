@@ -2,21 +2,38 @@ from clent.states import AgentState
 from clent.prompts import RENAME_PROMPT, SUMMARY_PROMPT
 from clent.lib.command_registry import commands
 from clent.lib.llm import _get_llm
+from clent.lib.ui import (
+    console,
+    print_info,
+    print_success,
+    print_error,
+    print_warning,
+    status as rich_status,
+)
 
-from clent.lib.conversation import get_messages, set_session_summary, save_metadata, delete_conversation
+from clent.lib.conversation import (
+    get_messages,
+    set_session_summary,
+    save_metadata,
+    delete_conversation,
+)
 
 
 def Command_Node(state: AgentState):
-    raw_command = state["user_input"][1:].strip() if state["user_input"].lower().startswith("/") else state["user_input"].strip()
+    raw_command = (
+        state["user_input"][1:].strip()
+        if state["user_input"].lower().startswith("/")
+        else state["user_input"].strip()
+    )
 
     result = commands(raw_command)
 
     if result["message"] and result.get("action") != "clear":
-        print(result["message"])
+        console.print(result["message"])
 
     match result["action"]:
         case "new_chat":
-            print("Started a new chat session.")
+            print_success("Started a new chat session")
             return {
                 "active_session_id": None,
                 "messages": [],
@@ -27,32 +44,50 @@ def Command_Node(state: AgentState):
 
         case "clear":
             if not state["active_session_id"]:
-                print("No active session to clear.")
+                print_warning("No active session to clear")
                 return state
 
-            confirm = input("This will delete the current session and all its messages. Continue? (y/n): ").strip().lower()
+            confirm = (
+                console.input(
+                    "[yellow]This will delete the current session and all its messages. Continue?[/yellow] [dim](y/n)[/dim]: "
+                )
+                .strip()
+                .lower()
+            )
             if confirm in ("n", ""):
-                print("Session deletion cancelled.")
+                print_warning("Session deletion cancelled")
                 return state
 
             if confirm not in ("y", "yes"):
-                print("Bad input. Deletion cancelled...")
+                print_error("Bad input. Deletion cancelled")
                 return state
 
             session_id = state["active_session_id"]
 
-            res = delete_conversation(session_id=session_id)
+            with rich_status("Deleting session..."):
+                res = delete_conversation(session_id=session_id)
+
             if not res.get("success"):
-                print(res.get("error") or "Session deletion failed. Please try again later...")
+                print_error(
+                    res.get("error")
+                    or "Session deletion failed. Please try again later"
+                )
                 return state
 
             available_sessions = state.get("available_sessions") or []
             # available_sessions is a list of metadata dicts; remove by id
-            if any((s.get("id") == session_id) for s in available_sessions if isinstance(s, dict)):
-                available_sessions = [s for s in available_sessions if not (isinstance(s, dict) and s.get("id") == session_id)]
+            if any(
+                (s.get("id") == session_id)
+                for s in available_sessions
+                if isinstance(s, dict)
+            ):
+                available_sessions = [
+                    s
+                    for s in available_sessions
+                    if not (isinstance(s, dict) and s.get("id") == session_id)
+                ]
 
-            if result.get("message"):
-                print(result["message"])
+            print_success("Session deleted")
 
             return {
                 "available_sessions": available_sessions,
@@ -66,60 +101,63 @@ def Command_Node(state: AgentState):
         case "sessions":
             sessions = state.get("available_sessions") or []
             if not sessions:
-                print("No available sessions.")
+                print_warning("No available sessions")
             else:
-                lines = []
+                console.print("[bold cyan]Available sessions:[/bold cyan]")
                 for s in sessions:
                     if isinstance(s, dict):
-                        label = s.get('name') or s.get('summary') or s.get('preview') or ''
-                        label = label.split("\n")
-                        label = " ".join(label)
+                        label = (
+                            s.get("name") or s.get("summary") or s.get("preview") or ""
+                        )
+                        label = label.split("\n")[0]
                         if len(label) > 100:
-                            label = label[:97] + '...'
-                        lines.append(f"{s.get('id')} - {label}")
+                            label = label[:97] + "..."
+                        console.print(f"  [cyan]{s.get('id')}[/cyan] - {label}")
                     else:
-                        lines.append(str(s))
-                print("Available sessions:\n", "\n".join(lines))
+                        console.print(f"  {s}")
 
         case "resume":
             sessions = state.get("available_sessions") or []
             if not sessions:
-                print("No available sessions.")
+                print_warning("No available sessions")
                 return
 
-            lines = []
+            console.print("[bold cyan]Select session to resume:[/bold cyan]")
             for s in sessions:
                 if isinstance(s, dict):
-                    label = s.get('name') or s.get('summary') or s.get('preview') or ''
+                    label = s.get("name") or s.get("summary") or s.get("preview") or ""
                     if len(label) > 100:
-                        label = label[:97] + '...'
-                    lines.append(f"{s.get('id')} - {label}")
+                        label = label[:97] + "..."
+                    console.print(f"  [cyan]{s.get('id')}[/cyan] - {label}")
                 else:
-                    lines.append(str(s))
+                    console.print(f"  {s}")
 
-            print("Select session to resume:\n" + "\n".join(lines) + "\n")
-
-            sid = input("Enter session ID (or press Enter to cancel): ").strip()
+            sid = console.input(
+                "\n[yellow]Enter session ID[/yellow] [dim](or press Enter to cancel)[/dim]: "
+            ).strip()
             if not sid:
-                print("Resume cancelled.")
+                print_warning("Resume cancelled")
                 return
 
             if sid == state.get("active_session_id"):
-                meta = state.get('available_sessions')["active_session_id"]
-                print(f"Already in session: {meta['name'] or meta['preview'] or meta['id']}")
+                meta = state.get("available_sessions")["active_session_id"]
+                print_info(
+                    f"Already in session: {meta['name'] or meta['preview'] or meta['id']}"
+                )
                 return
 
             ids = [s.get("id") for s in sessions if isinstance(s, dict)]
             if sid not in ids:
-                print(f"Session '{sid}' does not exist.")
+                print_error(f"Session '{sid}' does not exist")
                 return
 
-            try:
-                hist = get_messages(sid)
-            except Exception:
-                hist = []
+            with rich_status("Loading session..."):
+                try:
+                    hist = get_messages(sid)
+                except Exception:
+                    hist = []
 
-            print(f"Resumed session: {sid}\n")
+            print_success(f"Resumed session: {sid}")
             return {
                 "active_session_id": sid,
                 "messages": hist,
@@ -127,23 +165,29 @@ def Command_Node(state: AgentState):
 
         case "rename":
             if len(state.get("messages", [])) <= 1:
-                print("No active conversation to rename.")
+                print_warning("No active conversation to rename")
                 return
 
-            llm = _get_llm(temperature=0.0, max_tokens=20)
-            response = llm.invoke(str([RENAME_PROMPT, *state.get("messages", [])]))
+            with rich_status("Generating session name..."):
+                llm = _get_llm(temperature=0.0, max_tokens=20)
+                response = llm.invoke(str([RENAME_PROMPT, *state.get("messages", [])]))
+
             new_name = (response.content or "").strip().capitalize()
             if not new_name:
-                print("Session rename failed (empty name).")
+                print_error("Session rename failed (empty name)")
                 return
             else:
-                print(f"Session renamed to: {new_name}")
+                print_success(f"Session renamed to: {new_name}")
                 session_id = state.get("active_session_id")
                 available_sessions = state.get("available_sessions") or []
 
                 # Find the current session metadata in the available_sessions list
                 current_meta = next(
-                    (sess for sess in available_sessions if isinstance(sess, dict) and sess.get("id") == session_id),
+                    (
+                        sess
+                        for sess in available_sessions
+                        if isinstance(sess, dict) and sess.get("id") == session_id
+                    ),
                     None,
                 )
 
@@ -172,24 +216,34 @@ def Command_Node(state: AgentState):
 
         case "compact":
             if len(state.get("messages", [])) <= 1:
-                print("No conversation history selected to summarize.")
+                print_warning("No conversation history to summarize")
                 return
 
-            confirm = input("This will summarize the current conversation and remove detailed history. Continue? (y/n): ").strip().lower()
-            print("")
+            confirm = (
+                console.input(
+                    "[yellow]This will summarize the current conversation and remove detailed history. Continue?[/yellow] [dim](y/n)[/dim]: "
+                )
+                .strip()
+                .lower()
+            )
+            console.print()
             if confirm != "y":
-                print("Session summarization cancelled.")
+                print_warning("Session summarization cancelled")
                 return
 
-            llm = _get_llm(temperature=0.2, max_tokens=400)
-            summary_response = llm.invoke(str([SUMMARY_PROMPT, *state.get("messages", [])]))
+            with rich_status("Generating summary..."):
+                llm = _get_llm(temperature=0.2, max_tokens=400)
+                summary_response = llm.invoke(
+                    str([SUMMARY_PROMPT, *state.get("messages", [])])
+                )
+
             summary = (summary_response.content or "").strip()
 
             if not summary:
-                print("Session summarization failed (empty summary).")
+                print_error("Session summarization failed (empty summary)")
                 return
             else:
-                print(f"Session summary: {summary}")
+                print_success(f"Session summary: {summary}")
                 session_id = state.get("active_session_id")
                 if session_id:
                     set_session_summary(session_id, summary)
@@ -212,4 +266,3 @@ def Command_Node(state: AgentState):
                 "run_setup": True,
                 "user_input": "",
             }
-
