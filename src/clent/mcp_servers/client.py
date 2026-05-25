@@ -13,11 +13,30 @@ Transport options:
   - "sse"    : agent connects to a running HTTP server (best for remote tools).
 """
 
+import shutil
 import sys
 from pathlib import Path
 
+from clent.config import get_credentials_path, get_token_path
+
 # Absolute path to this package directory — used to locate server scripts.
 _SERVERS_DIR = Path(__file__).parent
+
+
+def _maybe_migrate_packaged_file(packaged_path: Path, dest_path: Path) -> Path:
+    """
+    Best-effort one-time migration from older installs/dev runs where files
+    lived inside the package directory (site-packages).
+    """
+    if dest_path.exists() or not packaged_path.exists():
+        return dest_path
+    try:
+        dest_path.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(packaged_path, dest_path)
+        return dest_path
+    except OSError:
+        # If we can't copy (permissions), fall back to packaged path.
+        return packaged_path
 
 
 def get_mcp_servers_config() -> dict:
@@ -35,12 +54,8 @@ def get_mcp_servers_config() -> dict:
         },
     """
 
-    # Determine the project root directory
+    # Determine the project root directory (package dir)
     project_root = Path(__file__).resolve().parent.parent
-    
-    # Path to the 'gmail' executable in the current virtualenv
-    gmail_exe_name = "gmail.exe" if sys.platform == "win32" else "gmail"
-    gmail_bin = Path(sys.executable).parent / gmail_exe_name
 
     servers = {
         # ── Shell tool ────────────────────────────────────────────────────────
@@ -52,17 +67,26 @@ def get_mcp_servers_config() -> dict:
     }
 
     # ── Gmail tool ────────────────────────────────────────────────────────
-    creds_path = project_root  / "credentials.json"
-    if creds_path.exists():
-        servers["gmail"] = {
-            "command": str(gmail_bin),
-            "args": [
-                "--creds-file-path", str(creds_path),
-                "--token-path", str(project_root / "token.json")
-            ],
-            "transport": "stdio",
-        }
-    else:
-        print(f"Warning: Skipping gmail MCP server because {creds_path} was not found.")
+    # Gmail tool (optional). Skip cleanly if creds or executable aren't present.
+    creds_path = _maybe_migrate_packaged_file(
+        project_root / "credentials.json",
+        get_credentials_path(),
+    )
+    token_path = _maybe_migrate_packaged_file(
+        project_root / "token.json",
+        get_token_path(),
+    )
+
+    servers["gmail"] = {
+        "command": sys.executable,
+        "args": [
+            str(_SERVERS_DIR / "gmail_server.py"),
+            "--creds-file-path",
+            str(creds_path),
+            "--token-path",
+            str(token_path),
+        ],
+        "transport": "stdio",
+    }
 
     return servers

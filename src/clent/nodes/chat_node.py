@@ -222,7 +222,7 @@ async def _chat_async(state: AgentState) -> dict:
     else:
         updated_messages = state["messages"]
 
-    if not save_result["success"]:
+    if assistant_message is not None and not save_result["success"]:
         print_error(f"Error saving message: {save_result['error']}")
 
     # ── Build state update ─────────────────────────────────────────────────────

@@ -5,6 +5,7 @@ from clent.config import (
     save_settings,
     is_configured,
     DEFAULT_SETTINGS,
+    get_settings_path,
 )
 from clent.lib.ui import print_header, print_success, print_info, console
 
@@ -64,7 +65,7 @@ def _run_wizard(settings: dict) -> dict:
 
     save_settings(updated)
     print()
-    print_success("Settings saved to settings.json")
+    print_success(f"Settings saved to {get_settings_path()}")
     print_info("Please restart clent for the changes to take effect.")
     print()
     sys.exit(0)

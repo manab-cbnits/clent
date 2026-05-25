@@ -1,4 +1,5 @@
 import json
+import os
 from pathlib import Path
 
 
@@ -6,8 +7,81 @@ from pathlib import Path
 # PATHS
 # ==========================================
 
-SETTINGS_PATH = Path(__file__).parent / "settings.json"
 _PKG_ROOT = Path(__file__).parent
+_PACKAGED_SETTINGS_PATH = _PKG_ROOT / "settings.json"
+
+
+def get_clent_home() -> Path:
+    """
+    Return the per-user clent directory.
+
+    Override with `CLENT_HOME`.
+
+    Windows: %LOCALAPPDATA%\\clent
+    Others : $XDG_CONFIG_HOME/clent or ~/.config/clent
+    """
+    override = (os.getenv("CLENT_HOME") or "").strip()
+    if override:
+        return Path(override).expanduser()
+
+    candidates: list[Path] = []
+
+    if os.name == "nt":
+        local = (os.getenv("LOCALAPPDATA") or "").strip()
+        roaming = (os.getenv("APPDATA") or "").strip()
+        home = str(Path.home())
+        candidates.extend(
+            [
+                Path(local) / "clent" if local else None,
+                Path(roaming) / "clent" if roaming else None,
+                Path(home) / ".clent",
+                Path.cwd() / ".clent",
+            ]
+        )
+    else:
+        xdg = (os.getenv("XDG_CONFIG_HOME") or "").strip()
+        candidates.extend(
+            [
+                (Path(xdg).expanduser() / "clent") if xdg else None,
+                Path.home() / ".config" / "clent",
+                Path.cwd() / ".clent",
+            ]
+        )
+
+    for p in [c for c in candidates if isinstance(c, Path)]:
+        try:
+            p.mkdir(parents=True, exist_ok=True)
+            test_path = p / ".write_test"
+            with open(test_path, "w", encoding="utf-8") as f:
+                f.write("ok")
+            try:
+                test_path.unlink(missing_ok=True)
+            except TypeError:
+                if test_path.exists():
+                    test_path.unlink()
+            return p
+        except OSError:
+            continue
+
+    # Last resort: a directory under the current working directory.
+    fallback = Path.cwd() / ".clent"
+    fallback.mkdir(parents=True, exist_ok=True)
+    return fallback
+
+
+def get_settings_path() -> Path:
+    return get_clent_home() / "settings.json"
+
+
+def get_credentials_path() -> Path:
+    return get_clent_home() / "credentials.json"
+
+
+def get_token_path() -> Path:
+    return get_clent_home() / "token.json"
+
+
+SETTINGS_PATH = get_settings_path()
 
 
 # ==========================================
@@ -35,7 +109,25 @@ DEFAULT_SETTINGS: dict = {
 
 def load_settings() -> dict:
     """Read settings.json; returns DEFAULT_SETTINGS if file is absent or malformed."""
+    # Prefer per-user settings (supports site-packages being read-only).
     if not SETTINGS_PATH.exists():
+        # One-time migration from older installs/dev runs where settings lived in the package dir.
+        if _PACKAGED_SETTINGS_PATH.exists():
+            try:
+                with open(_PACKAGED_SETTINGS_PATH, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                if isinstance(data, dict):
+                    try:
+                        SETTINGS_PATH.parent.mkdir(parents=True, exist_ok=True)
+                        with open(SETTINGS_PATH, "w", encoding="utf-8") as out:
+                            json.dump(data, out, indent=4, ensure_ascii=False)
+                        return data
+                    except OSError:
+                        # If the per-user dir isn't writable, just use the packaged settings for this run.
+                        return data
+            except (json.JSONDecodeError, OSError):
+                pass
+
         return DEFAULT_SETTINGS
 
     try:
@@ -50,8 +142,15 @@ def load_settings() -> dict:
 
 def save_settings(data: dict) -> None:
     """Atomically write *data* to settings.json."""
-    with open(SETTINGS_PATH, "w", encoding="utf-8") as f:
-        json.dump(data, f, indent=4, ensure_ascii=False)
+    try:
+        SETTINGS_PATH.parent.mkdir(parents=True, exist_ok=True)
+        with open(SETTINGS_PATH, "w", encoding="utf-8") as f:
+            json.dump(data, f, indent=4, ensure_ascii=False)
+    except OSError as exc:
+        raise OSError(
+            f"Unable to write settings to {SETTINGS_PATH}. "
+            f"Set CLENT_HOME to a writable directory. ({exc})"
+        ) from exc
 
 
 # ==========================================
@@ -77,16 +176,16 @@ def get_sessions_dir() -> Path:
     """
     Resolve the sessions directory from settings.json.
 
-    - Relative values (e.g. "sessions") are resolved relative to the package root.
+    - Relative values (e.g. "sessions") are resolved relative to the per-user clent directory.
     - Absolute values are used as-is.
-    - Falls back to <pkg>/sessions when the key is absent or empty.
+    - Falls back to <clent_home>/sessions when the key is absent or empty.
     """
     settings = load_settings()
     raw = settings.get("sessions_dir", "").strip()
     if not raw:
-        return _PKG_ROOT / "sessions"
+        return get_clent_home() / "sessions"
     p = Path(raw)
-    return p if p.is_absolute() else _PKG_ROOT / p
+    return p if p.is_absolute() else get_clent_home() / p
 
 
 def get_theme() -> str:
